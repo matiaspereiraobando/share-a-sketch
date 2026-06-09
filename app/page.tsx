@@ -1,20 +1,31 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
-import { EtchCanvas, type EtchCanvasHandle } from "./components/EtchCanvas";
+import { useCallback, useState } from "react";
+import { EtchCanvas } from "./components/EtchCanvas";
+import { EtchFrame } from "./components/EtchFrame";
+import { Toolbar } from "./components/Toolbar";
+import { Window95 } from "./components/Window95";
+import { ShareDialog } from "./components/ShareDialog";
 import { DEFAULT_PALETTE_ID, getPalette } from "@/lib/palettes";
 import { MAX_POINTS } from "@/lib/constants";
 import type { StoredStroke } from "@/lib/db/schema";
 
+type Mode = "draw" | "view";
+
 export default function HomePage() {
+  const [mode] = useState<Mode>("draw");
   const [paletteId, setPaletteId] = useState(DEFAULT_PALETTE_ID);
   const [colorIndex, setColorIndex] = useState(0);
   const [widthIndex, setWidthIndex] = useState(1);
   const [strokes, setStrokes] = useState<StoredStroke[]>([]);
   const [livePointCount, setLivePointCount] = useState(0);
-  const canvasRef = useRef<EtchCanvasHandle>(null);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareBusy, setShareBusy] = useState(false);
+  const [shareError, setShareError] = useState<string | null>(null);
 
   const palette = getPalette(paletteId);
+
+  const hasContent = strokes.length > 0 || livePointCount > 0;
 
   const handleStrokeCommit = useCallback((stroke: StoredStroke) => {
     setStrokes((prev) => [...prev, stroke]);
@@ -29,32 +40,90 @@ export default function HomePage() {
     setLivePointCount(0);
   }, []);
 
-  const pct = Math.min(100, Math.round((livePointCount / MAX_POINTS) * 100));
+  const handlePaletteChange = useCallback((id: string) => {
+    setPaletteId(id);
+    setColorIndex(0);
+    setStrokes([]);
+    setLivePointCount(0);
+  }, []);
+
+  const handleShare = useCallback(async (name: string) => {
+    setShareBusy(true);
+    setShareError(null);
+    try {
+      // TODO: wire up to POST /api/drawings in the API todo
+      await new Promise((res) => setTimeout(res, 300));
+      console.log("would share", { name });
+      setShareOpen(false);
+    } catch (err) {
+      setShareError(err instanceof Error ? err.message : "Failed to share");
+    } finally {
+      setShareBusy(false);
+    }
+  }, []);
 
   return (
-    <main style={{ padding: 16 }}>
-      <h1>Share-a-Sketch</h1>
-      <EtchCanvas
-        ref={canvasRef}
-        mode="draw"
-        palette={palette}
-        strokes={strokes}
-        colorIndex={colorIndex}
-        widthIndex={widthIndex}
-        maxPoints={MAX_POINTS}
-        onStrokeCommit={handleStrokeCommit}
-        onLivePointCountChange={setLivePointCount}
+    <div
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "flex-start",
+        justifyContent: "center",
+        padding: 16,
+      }}
+    >
+      <Window95 title="Share-a-Sketch">
+        <div
+          style={{
+            display: "flex",
+            gap: 12,
+            alignItems: "flex-start",
+            flexWrap: "wrap",
+          }}
+        >
+          <EtchFrame>
+            <EtchCanvas
+              mode="draw"
+              palette={palette}
+              strokes={strokes}
+              colorIndex={colorIndex}
+              widthIndex={widthIndex}
+              maxPoints={MAX_POINTS}
+              onStrokeCommit={handleStrokeCommit}
+              onLivePointCountChange={setLivePointCount}
+            />
+          </EtchFrame>
+          <div style={{ width: 260 }}>
+            <Toolbar
+              palette={palette}
+              paletteId={paletteId}
+              colorIndex={colorIndex}
+              widthIndex={widthIndex}
+              pointCount={livePointCount}
+              maxPoints={MAX_POINTS}
+              canUndo={strokes.length > 0}
+              canReset={hasContent}
+              canShare={mode === "draw" && strokes.length > 0}
+              onPaletteChange={handlePaletteChange}
+              onColorChange={setColorIndex}
+              onWidthChange={setWidthIndex}
+              onUndo={handleUndo}
+              onReset={handleReset}
+              onShare={() => {
+                setShareError(null);
+                setShareOpen(true);
+              }}
+            />
+          </div>
+        </div>
+      </Window95>
+      <ShareDialog
+        open={shareOpen}
+        busy={shareBusy}
+        error={shareError}
+        onCancel={() => setShareOpen(false)}
+        onSubmit={handleShare}
       />
-      <div style={{ marginTop: 8 }}>
-        <button onClick={handleUndo}>Undo</button>{" "}
-        <button onClick={handleReset}>Reset</button>{" "}
-        <span>
-          Points: {livePointCount} / {MAX_POINTS} ({pct}%)
-        </span>
-      </div>
-      <div style={{ marginTop: 8, fontSize: 11 }}>
-        Palette: {palette.name} • Color idx: {colorIndex} • Width idx: {widthIndex}
-      </div>
-    </main>
+    </div>
   );
 }
