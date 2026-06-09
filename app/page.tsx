@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { EtchCanvas } from "./components/EtchCanvas";
 import { EtchFrame } from "./components/EtchFrame";
 import { Toolbar } from "./components/Toolbar";
@@ -29,7 +29,7 @@ export default function HomePage() {
   const [colorIndex, setColorIndex] = useState(0);
   const [widthIndex, setWidthIndex] = useState(1);
   const [strokes, setStrokes] = useState<StoredStroke[]>([]);
-  const [livePointCount, setLivePointCount] = useState(0);
+  const [inProgressPointCount, setInProgressPointCount] = useState(0);
 
   const [shareOpen, setShareOpen] = useState(false);
   const [shareBusy, setShareBusy] = useState(false);
@@ -62,9 +62,9 @@ export default function HomePage() {
             colorIndex={colorIndex}
             widthIndex={widthIndex}
             strokes={strokes}
-            livePointCount={livePointCount}
+            inProgressPointCount={inProgressPointCount}
             setStrokes={setStrokes}
-            setLivePointCount={setLivePointCount}
+            setInProgressPointCount={setInProgressPointCount}
             setPaletteId={setPaletteId}
             setColorIndex={setColorIndex}
             setWidthIndex={setWidthIndex}
@@ -158,7 +158,7 @@ export default function HomePage() {
             onNew={() => {
               setMode({ kind: "draw" });
               setStrokes([]);
-              setLivePointCount(0);
+              setInProgressPointCount(0);
               setViewerError(null);
             }}
           />
@@ -193,13 +193,13 @@ export default function HomePage() {
                 hidden: false,
               });
               setStrokes([]);
-              setLivePointCount(0);
+              setInProgressPointCount(0);
             } else {
               setShareError(
                 "Your sketch was saved! No other sketches to show yet. Draw another?",
               );
               setStrokes([]);
-              setLivePointCount(0);
+              setInProgressPointCount(0);
               setTimeout(() => setShareError(null), 4000);
             }
           } catch (err) {
@@ -224,11 +224,11 @@ type DrawModeProps = {
   colorIndex: number;
   widthIndex: number;
   strokes: StoredStroke[];
-  livePointCount: number;
+  inProgressPointCount: number;
   setStrokes: (
     update: StoredStroke[] | ((prev: StoredStroke[]) => StoredStroke[]),
   ) => void;
-  setLivePointCount: (n: number) => void;
+  setInProgressPointCount: (n: number) => void;
   setPaletteId: (id: string) => void;
   setColorIndex: (i: number) => void;
   setWidthIndex: (i: number) => void;
@@ -240,22 +240,45 @@ function DrawMode({
   colorIndex,
   widthIndex,
   strokes,
-  livePointCount,
+  inProgressPointCount,
   setStrokes,
-  setLivePointCount,
+  setInProgressPointCount,
   setPaletteId,
   setColorIndex,
   setWidthIndex,
   openShare,
 }: DrawModeProps) {
   const palette = getPalette(paletteId);
-  const hasContent = strokes.length > 0 || livePointCount > 0;
+
+  const committedPointCount = useMemo(
+    () => strokes.reduce((acc, s) => acc + s.p.length / 2, 0),
+    [strokes],
+  );
+  const totalPointCount = committedPointCount + inProgressPointCount;
+  const hasContent = strokes.length > 0 || inProgressPointCount > 0;
 
   const handleStrokeCommit = useCallback(
     (stroke: StoredStroke) => {
       setStrokes((prev) => [...prev, stroke]);
     },
     [setStrokes],
+  );
+
+  const handlePaletteChange = useCallback(
+    (id: string) => {
+      if (id === paletteId) return;
+      if (strokes.length > 0) {
+        const confirmed = window.confirm(
+          "Changing the palette will clear your current sketch because each stroke's color is stored as an index into the active palette. Continue?",
+        );
+        if (!confirmed) return;
+      }
+      setPaletteId(id);
+      setColorIndex(0);
+      setStrokes([]);
+      setInProgressPointCount(0);
+    },
+    [paletteId, strokes.length, setPaletteId, setColorIndex, setStrokes, setInProgressPointCount],
   );
 
   return (
@@ -276,7 +299,7 @@ function DrawMode({
           widthIndex={widthIndex}
           maxPoints={MAX_POINTS}
           onStrokeCommit={handleStrokeCommit}
-          onLivePointCountChange={setLivePointCount}
+          onInProgressPointCountChange={setInProgressPointCount}
         />
       </EtchFrame>
       <div style={{ width: 260 }}>
@@ -285,23 +308,18 @@ function DrawMode({
           paletteId={paletteId}
           colorIndex={colorIndex}
           widthIndex={widthIndex}
-          pointCount={livePointCount}
+          pointCount={totalPointCount}
           maxPoints={MAX_POINTS}
           canUndo={strokes.length > 0}
           canReset={hasContent}
           canShare={strokes.length > 0}
-          onPaletteChange={(id) => {
-            setPaletteId(id);
-            setColorIndex(0);
-            setStrokes([]);
-            setLivePointCount(0);
-          }}
+          onPaletteChange={handlePaletteChange}
           onColorChange={setColorIndex}
           onWidthChange={setWidthIndex}
           onUndo={() => setStrokes((prev) => prev.slice(0, -1))}
           onReset={() => {
             setStrokes([]);
-            setLivePointCount(0);
+            setInProgressPointCount(0);
           }}
           onShare={openShare}
         />

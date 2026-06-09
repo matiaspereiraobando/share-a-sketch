@@ -3,11 +3,9 @@
 import {
   useCallback,
   useEffect,
-  useImperativeHandle,
   useLayoutEffect,
   useRef,
   useState,
-  forwardRef,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import {
@@ -19,11 +17,6 @@ import {
 import type { Palette } from "@/lib/palettes";
 import type { StoredStroke } from "@/lib/db/schema";
 
-export type EtchCanvasHandle = {
-  /** Number of points across all committed strokes + the in-progress stroke. */
-  getLivePointCount: () => number;
-};
-
 type DrawProps = {
   mode: "draw";
   palette: Palette;
@@ -32,7 +25,12 @@ type DrawProps = {
   widthIndex: number;
   maxPoints: number;
   onStrokeCommit: (stroke: StoredStroke) => void;
-  onLivePointCountChange?: (count: number) => void;
+  /**
+   * Reports the point count of the current in-progress stroke only.
+   * The parent owns the committed strokes and derives the total itself,
+   * so undo/reset don't desync and the count doesn't flicker on stroke end.
+   */
+  onInProgressPointCountChange?: (count: number) => void;
 };
 
 type ViewProps = {
@@ -99,8 +97,7 @@ function drawStrokes(
   ctx.restore();
 }
 
-export const EtchCanvas = forwardRef<EtchCanvasHandle, EtchCanvasProps>(
-  function EtchCanvas(props, ref) {
+export function EtchCanvas(props: EtchCanvasProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const liveStrokeRef = useRef<StoredStroke | null>(null);
     const activePointerIdRef = useRef<number | null>(null);
@@ -112,25 +109,16 @@ export const EtchCanvas = forwardRef<EtchCanvasHandle, EtchCanvasProps>(
       0,
     );
 
-    const onLivePointCountChange =
-      props.mode === "draw" ? props.onLivePointCountChange : undefined;
+    const onInProgressPointCountChange =
+      props.mode === "draw" ? props.onInProgressPointCountChange : undefined;
 
-    const reportLive = useCallback(() => {
-      if (!onLivePointCountChange) return;
+    const reportInProgress = useCallback(() => {
+      if (!onInProgressPointCountChange) return;
       const inProgress = liveStrokeRef.current
         ? liveStrokeRef.current.p.length / 2
         : 0;
-      onLivePointCountChange(committedPointCount + inProgress);
-    }, [onLivePointCountChange, committedPointCount]);
-
-    useImperativeHandle(ref, () => ({
-      getLivePointCount: () => {
-        const inProgress = liveStrokeRef.current
-          ? liveStrokeRef.current.p.length / 2
-          : 0;
-        return committedPointCount + inProgress;
-      },
-    }));
+      onInProgressPointCountChange(inProgress);
+    }, [onInProgressPointCountChange]);
 
     useLayoutEffect(() => {
       const canvas = canvasRef.current;
@@ -202,8 +190,8 @@ export const EtchCanvas = forwardRef<EtchCanvasHandle, EtchCanvasProps>(
         props.onStrokeCommit(live);
       }
       bumpRedraw();
-      reportLive();
-    }, [props, bumpRedraw, reportLive]);
+      reportInProgress();
+    }, [props, bumpRedraw, reportInProgress]);
 
     const handlePointerDown = useCallback(
       (e: ReactPointerEvent<HTMLCanvasElement>) => {
@@ -225,14 +213,14 @@ export const EtchCanvas = forwardRef<EtchCanvasHandle, EtchCanvasProps>(
           p: [coords.x, coords.y],
         };
         bumpRedraw();
-        reportLive();
+        reportInProgress();
       },
       [
         props,
         committedPointCount,
         toLogicalCoords,
         bumpRedraw,
-        reportLive,
+        reportInProgress,
       ],
     );
 
@@ -258,7 +246,7 @@ export const EtchCanvas = forwardRef<EtchCanvasHandle, EtchCanvasProps>(
 
         live.p.push(coords.x, coords.y);
         bumpRedraw();
-        reportLive();
+        reportInProgress();
 
         if (totalAfter === props.maxPoints) {
           finishStroke();
@@ -270,7 +258,7 @@ export const EtchCanvas = forwardRef<EtchCanvasHandle, EtchCanvasProps>(
         toLogicalCoords,
         finishStroke,
         bumpRedraw,
-        reportLive,
+        reportInProgress,
       ],
     );
 
@@ -306,5 +294,4 @@ export const EtchCanvas = forwardRef<EtchCanvasHandle, EtchCanvasProps>(
         }}
       />
     );
-  },
-);
+}
