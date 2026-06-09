@@ -1,6 +1,6 @@
 import { getAnonId } from "@/lib/anonId";
 import { ANON_ID_HEADER } from "@/lib/api";
-import type { DrawingDTO, StoredStroke } from "@/lib/types";
+import type { DrawingDTO, StatsDTO, StoredStroke } from "@/lib/types";
 
 export type ApiErrorResponse = {
   error: string;
@@ -72,6 +72,8 @@ export type VoteResponse = {
   alreadyVoted: boolean;
 };
 
+export type StatsResponse = StatsDTO;
+
 export const api = {
   submitDrawing(body: SubmitDrawingBody) {
     return request<SubmitDrawingResponse>("/api/drawings", {
@@ -96,5 +98,8 @@ export const api = {
         body: JSON.stringify({ type }),
       },
     );
+  },
+  getStats() {
+    return request<StatsResponse>("/api/stats");
   },
 };

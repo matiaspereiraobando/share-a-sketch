@@ -8,6 +8,7 @@ import { Window95 } from "./components/Window95";
 import { ShareDialog } from "./components/ShareDialog";
 import { ViewerControls } from "./components/ViewerControls";
 import { ShortIdChip } from "./components/ShortIdChip";
+import { StatsBar } from "./components/StatsBar";
 import { DEFAULT_PALETTE_ID, getPalette } from "@/lib/palettes";
 import { MAX_POINTS } from "@/lib/constants";
 import { api, ApiError } from "@/lib/apiClient";
@@ -38,6 +39,8 @@ export default function HomePage() {
   const [voteBusy, setVoteBusy] = useState(false);
   const [loadingNext, setLoadingNext] = useState(false);
   const [viewerError, setViewerError] = useState<string | null>(null);
+
+  const [statsKey, setStatsKey] = useState(0);
 
   return (
     <div
@@ -163,6 +166,7 @@ export default function HomePage() {
             }}
           />
         )}
+        <StatsBar refreshKey={statsKey} />
       </Window95>
 
       <ShareDialog
@@ -184,6 +188,7 @@ export default function HomePage() {
               strokes,
               pointCount,
             });
+            setStatsKey((k) => k + 1);
             setShareOpen(false);
             if (response.next) {
               setMode({
