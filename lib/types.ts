@@ -15,3 +15,12 @@ export type DrawingDTO = {
   pointCount: number;
   createdAt: string;
 };
+
+/**
+ * Aggregate, game-wide stats over the active (non-hidden) sketch pool.
+ */
+export type StatsDTO = {
+  totalDrawings: number;
+  totalInk: number;
+  uniqueCreators: number;
+};
