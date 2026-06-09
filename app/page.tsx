@@ -8,6 +8,7 @@ import { Window95 } from "./components/Window95";
 import { ShareDialog } from "./components/ShareDialog";
 import { DEFAULT_PALETTE_ID, getPalette } from "@/lib/palettes";
 import { MAX_POINTS } from "@/lib/constants";
+import { api } from "@/lib/apiClient";
 import type { StoredStroke } from "@/lib/db/schema";
 
 type Mode = "draw" | "view";
@@ -47,20 +48,34 @@ export default function HomePage() {
     setLivePointCount(0);
   }, []);
 
-  const handleShare = useCallback(async (name: string) => {
-    setShareBusy(true);
-    setShareError(null);
-    try {
-      // TODO: wire up to POST /api/drawings in the API todo
-      await new Promise((res) => setTimeout(res, 300));
-      console.log("would share", { name });
-      setShareOpen(false);
-    } catch (err) {
-      setShareError(err instanceof Error ? err.message : "Failed to share");
-    } finally {
-      setShareBusy(false);
-    }
-  }, []);
+  const handleShare = useCallback(
+    async (name: string) => {
+      setShareBusy(true);
+      setShareError(null);
+      try {
+        const pointCount = strokes.reduce(
+          (acc, s) => acc + s.p.length / 2,
+          0,
+        );
+        const response = await api.submitDrawing({
+          paletteId,
+          authorName: name,
+          strokes,
+          pointCount,
+        });
+        setShareOpen(false);
+        // TODO: in the replay todo, transition to viewing `response.next`.
+        console.log("shared successfully", response);
+      } catch (err) {
+        setShareError(
+          err instanceof Error ? err.message : "Failed to share",
+        );
+      } finally {
+        setShareBusy(false);
+      }
+    },
+    [paletteId, strokes],
+  );
 
   return (
     <div
