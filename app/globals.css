@@ -1,0 +1,99 @@
+:root {
+  --w95-bg: #c0c0c0;
+  --w95-bg-dark: #808080;
+  --w95-bg-darker: #404040;
+  --w95-bg-light: #dfdfdf;
+  --w95-bg-lightest: #ffffff;
+  --w95-titlebar: #000080;
+  --w95-titlebar-text: #ffffff;
+  --w95-text: #000000;
+  --w95-text-disabled: #808080;
+  --w95-accent: #000080;
+  --w95-shadow: #000000;
+
+  --etch-bezel: #9ec9e8;
+  --etch-bezel-dark: #6ea4c8;
+  --etch-bezel-light: #c4ddf0;
+  --etch-screen: #c9d2b8;
+
+  --canvas-bg: #d8dec2;
+
+  --font-system: "MS Sans Serif", "Tahoma", "Geneva", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-system);
+  font-size: 11px;
+  color: var(--w95-text);
+  background: #008080;
+  min-height: 100vh;
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  color: var(--w95-text-disabled);
+}
+
+/* Windows 95 raised border (used on panels, buttons-up) */
+.w95-raised {
+  background: var(--w95-bg);
+  border-top: 1px solid var(--w95-bg-lightest);
+  border-left: 1px solid var(--w95-bg-lightest);
+  border-right: 1px solid var(--w95-bg-darker);
+  border-bottom: 1px solid var(--w95-bg-darker);
+  box-shadow: inset -1px -1px 0 var(--w95-bg-dark),
+    inset 1px 1px 0 var(--w95-bg-light);
+}
+
+/* Windows 95 sunken border (inset) */
+.w95-sunken {
+  background: var(--w95-bg);
+  border-top: 1px solid var(--w95-bg-darker);
+  border-left: 1px solid var(--w95-bg-darker);
+  border-right: 1px solid var(--w95-bg-lightest);
+  border-bottom: 1px solid var(--w95-bg-lightest);
+  box-shadow: inset 1px 1px 0 var(--w95-bg-dark),
+    inset -1px -1px 0 var(--w95-bg-light);
+}
+
+.w95-button {
+  background: var(--w95-bg);
+  border-top: 1px solid var(--w95-bg-lightest);
+  border-left: 1px solid var(--w95-bg-lightest);
+  border-right: 1px solid var(--w95-bg-darker);
+  border-bottom: 1px solid var(--w95-bg-darker);
+  box-shadow: inset -1px -1px 0 var(--w95-bg-dark),
+    inset 1px 1px 0 var(--w95-bg-light);
+  padding: 4px 12px;
+  min-width: 64px;
+  color: var(--w95-text);
+}
+
+.w95-button:active:not(:disabled) {
+  border-top: 1px solid var(--w95-bg-darker);
+  border-left: 1px solid var(--w95-bg-darker);
+  border-right: 1px solid var(--w95-bg-lightest);
+  border-bottom: 1px solid var(--w95-bg-lightest);
+  box-shadow: inset 1px 1px 0 var(--w95-bg-dark);
+  padding: 5px 11px 3px 13px;
+}
+
+.w95-button:focus-visible {
+  outline: 1px dotted var(--w95-text);
+  outline-offset: -4px;
+}
