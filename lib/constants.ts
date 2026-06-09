@@ -35,7 +35,7 @@ export const CANVAS_HEIGHT = 240;
  * Stroke widths offered in the toolbar. Index into this array is what gets
  * stored in each stroke.
  */
-export const STROKE_WIDTHS = [1, 2, 4] as const;
+export const STROKE_WIDTHS = [2, 5, 9] as const;
 
 /**
  * Alpha applied per stroke for the color-mixing effect. Each stroke is
