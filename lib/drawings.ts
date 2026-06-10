@@ -20,6 +20,7 @@ export async function pickRandomDrawing(
       flagCount: drawings.flagCount,
       pointCount: drawings.pointCount,
       createdAt: drawings.createdAt,
+      promptText: drawings.promptText,
     })
     .from(drawings)
     .where(whereClause)
@@ -42,6 +43,7 @@ export async function getDrawingById(id: string): Promise<DrawingDTO | null> {
       pointCount: drawings.pointCount,
       createdAt: drawings.createdAt,
       status: drawings.status,
+      promptText: drawings.promptText,
     })
     .from(drawings)
     .where(eq(drawings.id, id))
@@ -70,6 +72,7 @@ type RowLike = {
   flagCount: number;
   pointCount: number;
   createdAt: Date;
+  promptText: string | null;
 };
 
 function toDTO(row: RowLike): DrawingDTO {
@@ -82,5 +85,6 @@ function toDTO(row: RowLike): DrawingDTO {
     flagCount: row.flagCount,
     pointCount: row.pointCount,
     createdAt: row.createdAt.toISOString(),
+    promptText: row.promptText,
   };
 }
