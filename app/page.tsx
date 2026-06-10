@@ -9,7 +9,7 @@ import { ShareDialog } from "./components/ShareDialog";
 import { ViewerControls } from "./components/ViewerControls";
 import { ShortIdChip } from "./components/ShortIdChip";
 import { StatsBar } from "./components/StatsBar";
-import { PromptPanel } from "./components/PromptPanel";
+import { PromptPanel, PromptGateOverlay } from "./components/PromptPanel";
 import { OnboardingDialog } from "./components/OnboardingDialog";
 import { CelebrationDialog } from "./components/CelebrationDialog";
 import { DEFAULT_PALETTE_ID, getPalette } from "@/lib/palettes";
@@ -331,6 +331,7 @@ function DrawMode({
   );
   const totalPointCount = committedPointCount + inProgressPointCount;
   const hasContent = strokes.length > 0 || inProgressPointCount > 0;
+  const promptChoicePending = !promptOptIn && !promptDismissed;
 
   const handleStrokeCommit = useCallback(
     (stroke: StoredStroke) => {
@@ -368,7 +369,6 @@ function DrawMode({
         prompt={prompt}
         optedIn={promptOptIn}
         dismissed={promptDismissed}
-        onAccept={onAcceptPrompt}
         onDismiss={onDismissPrompt}
         onReset={onResetPrompt}
       />
@@ -381,7 +381,18 @@ function DrawMode({
           flexWrap: "wrap",
         }}
       >
-        <EtchFrame>
+        <EtchFrame
+          overlay={
+            promptChoicePending ? (
+              <PromptGateOverlay
+                prompt={prompt}
+                onAccept={onAcceptPrompt}
+                onDismiss={onDismissPrompt}
+              />
+            ) : undefined
+          }
+          overlayInteractive={promptChoicePending}
+        >
           <EtchCanvas
             mode="draw"
             palette={palette}
@@ -389,6 +400,7 @@ function DrawMode({
             colorIndex={colorIndex}
             widthIndex={widthIndex}
             maxPoints={MAX_POINTS}
+            drawingDisabled={promptChoicePending}
             onStrokeCommit={handleStrokeCommit}
             onInProgressPointCountChange={setInProgressPointCount}
           />
