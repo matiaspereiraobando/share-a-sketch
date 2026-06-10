@@ -41,6 +41,37 @@ export function ViewerControls({
         gap: 8,
       }}
     >
+      {drawing.promptText ? (
+        <div
+          className="w95-sunken"
+          style={{
+            padding: 6,
+            background: "var(--w95-bg-light)",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 6,
+            flexWrap: "wrap",
+          }}
+        >
+          <span
+            style={{
+              background: "var(--w95-titlebar)",
+              color: "var(--w95-titlebar-text)",
+              fontWeight: "bold",
+              fontSize: 10,
+              padding: "1px 4px",
+              flex: "none",
+              letterSpacing: 0.5,
+            }}
+          >
+            PROMPT
+          </span>
+          <span style={{ fontStyle: "italic", fontSize: 12 }}>
+            &quot;{drawing.promptText}&quot;
+          </span>
+        </div>
+      ) : null}
+
       <div className="w95-sunken" style={{ padding: 6, background: "var(--w95-bg-light)" }}>
         <div style={{ fontSize: 10, color: "var(--w95-bg-darker)" }}>
           drawn by

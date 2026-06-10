@@ -14,6 +14,8 @@ export type DrawingDTO = {
   flagCount: number;
   pointCount: number;
   createdAt: string;
+  /** Daily prompt the creator opted into, or null for free draw. */
+  promptText: string | null;
 };
 
 /**
