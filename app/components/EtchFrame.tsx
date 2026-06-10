@@ -6,13 +6,19 @@ type EtchFrameProps = {
   children: ReactNode;
   /** Optional overlay rendered on top of the canvas (e.g. short id for viewer). */
   overlay?: ReactNode;
+  /** When true, the overlay receives pointer events (e.g. prompt gate). */
+  overlayInteractive?: boolean;
 };
 
 /**
  * Powder-blue Etch-a-Sketch-style bezel around the canvas, with two faux
  * knobs at the bottom.
  */
-export function EtchFrame({ children, overlay }: EtchFrameProps) {
+export function EtchFrame({
+  children,
+  overlay,
+  overlayInteractive = false,
+}: EtchFrameProps) {
   return (
     <div
       style={{
@@ -40,7 +46,7 @@ export function EtchFrame({ children, overlay }: EtchFrameProps) {
             style={{
               position: "absolute",
               inset: 0,
-              pointerEvents: "none",
+              pointerEvents: overlayInteractive ? "auto" : "none",
             }}
           >
             {overlay}

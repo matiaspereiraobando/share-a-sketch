@@ -24,6 +24,8 @@ type DrawProps = {
   colorIndex: number;
   widthIndex: number;
   maxPoints: number;
+  /** When true, pointer input is ignored (e.g. prompt gate pending). */
+  drawingDisabled?: boolean;
   onStrokeCommit: (stroke: StoredStroke) => void;
   /**
    * Reports the point count of the current in-progress stroke only.
@@ -197,6 +199,7 @@ export function EtchCanvas(props: EtchCanvasProps) {
     const handlePointerDown = useCallback(
       (e: ReactPointerEvent<HTMLCanvasElement>) => {
         if (props.mode !== "draw") return;
+        if (props.drawingDisabled) return;
         if (activePointerIdRef.current !== null) return;
         if (committedPointCount >= props.maxPoints) return;
 
@@ -292,8 +295,15 @@ export function EtchCanvas(props: EtchCanvasProps) {
           background: "var(--canvas-bg)",
           imageRendering: "pixelated",
           touchAction: "none",
-          cursor: props.mode === "draw" ? "crosshair" : "default",
+          cursor:
+            props.mode === "draw"
+              ? props.drawingDisabled
+                ? "not-allowed"
+                : "crosshair"
+              : "default",
           display: "block",
+          pointerEvents:
+            props.mode === "draw" && props.drawingDisabled ? "none" : "auto",
         }}
       />
     );
