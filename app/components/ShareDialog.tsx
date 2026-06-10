@@ -6,8 +6,10 @@ type ShareDialogProps = {
   open: boolean;
   busy?: boolean;
   error?: string | null;
+  /** Prompt the player opted in for; null when they did not opt in. */
+  promptText: string | null;
   onCancel: () => void;
-  onSubmit: (name: string) => void;
+  onSubmit: (name: string, usedPrompt: boolean) => void;
 };
 
 const MAX_NAME_LENGTH = 24;
@@ -16,15 +18,18 @@ export function ShareDialog({
   open,
   busy = false,
   error,
+  promptText,
   onCancel,
   onSubmit,
 }: ShareDialogProps) {
   const [name, setName] = useState("");
+  const [confirmPrompt, setConfirmPrompt] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
       setName("");
+      setConfirmPrompt(true);
       const id = setTimeout(() => inputRef.current?.focus(), 0);
       return () => clearTimeout(id);
     }
@@ -34,7 +39,8 @@ export function ShareDialog({
 
   const submit = () => {
     if (busy) return;
-    onSubmit(name.trim().slice(0, MAX_NAME_LENGTH));
+    const usedPrompt = promptText !== null && confirmPrompt;
+    onSubmit(name.trim().slice(0, MAX_NAME_LENGTH), usedPrompt);
   };
 
   return (
@@ -105,6 +111,38 @@ export function ShareDialog({
               placeholder="(anonymous)"
             />
           </div>
+          {promptText ? (
+            <div
+              className="w95-sunken"
+              style={{
+                marginTop: 10,
+                padding: 6,
+                background: "var(--w95-bg-light)",
+                fontSize: 11,
+              }}
+            >
+              <div style={{ color: "var(--w95-bg-darker)" }}>Drawn for:</div>
+              <div style={{ fontWeight: "bold", marginTop: 2, marginBottom: 6 }}>
+                &quot;{promptText}&quot;
+              </div>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  cursor: busy ? "not-allowed" : "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={confirmPrompt}
+                  onChange={(e) => setConfirmPrompt(e.target.checked)}
+                  disabled={busy}
+                />
+                <span>Yep, I drew this</span>
+              </label>
+            </div>
+          ) : null}
           {error ? (
             <div
               role="alert"

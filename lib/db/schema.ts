@@ -37,6 +37,7 @@ export const drawings = pgTable(
     flagCount: integer("flag_count").notNull().default(0),
     status: drawingStatusEnum("status").notNull().default("active"),
     creatorAnonId: text("creator_anon_id").notNull(),
+    promptText: text("prompt_text"),
   },
   (t) => ({
     statusCreatedIdx: index("drawings_status_created_idx").on(

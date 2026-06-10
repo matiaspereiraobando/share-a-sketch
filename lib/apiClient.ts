@@ -50,6 +50,7 @@ export type SubmitDrawingBody = {
   authorName: string;
   strokes: StoredStroke[];
   pointCount: number;
+  usedPrompt: boolean;
 };
 
 export type SubmitDrawingResponse = {

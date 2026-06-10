@@ -97,3 +97,19 @@ button:disabled {
   outline: 1px dotted var(--w95-text);
   outline-offset: -4px;
 }
+
+/*
+ * Draw/View row: canvas next to sidebar on desktop, stacked on phones.
+ * Inline styles on the same elements still drive desktop layout; these
+ * rules only kick in below the breakpoint.
+ */
+@media (max-width: 720px) {
+  .sas-draw-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+
+  .sas-side {
+    width: 100% !important;
+  }
+}

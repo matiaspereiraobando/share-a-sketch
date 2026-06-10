@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { EtchCanvas } from "./components/EtchCanvas";
 import { EtchFrame } from "./components/EtchFrame";
 import { Toolbar } from "./components/Toolbar";
@@ -9,8 +9,12 @@ import { ShareDialog } from "./components/ShareDialog";
 import { ViewerControls } from "./components/ViewerControls";
 import { ShortIdChip } from "./components/ShortIdChip";
 import { StatsBar } from "./components/StatsBar";
+import { PromptPanel } from "./components/PromptPanel";
+import { OnboardingDialog } from "./components/OnboardingDialog";
+import { CelebrationDialog } from "./components/CelebrationDialog";
 import { DEFAULT_PALETTE_ID, getPalette } from "@/lib/palettes";
-import { MAX_POINTS } from "@/lib/constants";
+import { MAX_POINTS, ONBOARDING_STORAGE_KEY } from "@/lib/constants";
+import { getCurrentPrompt } from "@/lib/prompts";
 import { api, ApiError } from "@/lib/apiClient";
 import { useReplay } from "@/lib/replay";
 import type { DrawingDTO, StoredStroke } from "@/lib/types";
@@ -32,6 +36,10 @@ export default function HomePage() {
   const [strokes, setStrokes] = useState<StoredStroke[]>([]);
   const [inProgressPointCount, setInProgressPointCount] = useState(0);
 
+  const [promptOptIn, setPromptOptIn] = useState(false);
+  const [promptDismissed, setPromptDismissed] = useState(false);
+  const currentPrompt = useMemo(() => getCurrentPrompt(), []);
+
   const [shareOpen, setShareOpen] = useState(false);
   const [shareBusy, setShareBusy] = useState(false);
   const [shareError, setShareError] = useState<string | null>(null);
@@ -41,6 +49,25 @@ export default function HomePage() {
   const [viewerError, setViewerError] = useState<string | null>(null);
 
   const [statsKey, setStatsKey] = useState(0);
+
+  const [celebration, setCelebration] = useState<
+    { open: true; next: DrawingDTO | null } | { open: false }
+  >({ open: false });
+
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  useEffect(() => {
+    try {
+      const seen = window.localStorage.getItem(ONBOARDING_STORAGE_KEY);
+      if (!seen) setOnboardingOpen(true);
+    } catch {}
+  }, []);
+  const closeOnboarding = useCallback(() => {
+    setOnboardingOpen(false);
+    try {
+      window.localStorage.setItem(ONBOARDING_STORAGE_KEY, "1");
+    } catch {}
+  }, []);
+  const openOnboarding = useCallback(() => setOnboardingOpen(true), []);
 
   return (
     <div
@@ -58,6 +85,7 @@ export default function HomePage() {
             ? "Share-a-Sketch - Viewing a sketch"
             : "Share-a-Sketch"
         }
+        onHelp={openOnboarding}
       >
         {mode.kind === "draw" ? (
           <DrawMode
@@ -71,6 +99,21 @@ export default function HomePage() {
             setPaletteId={setPaletteId}
             setColorIndex={setColorIndex}
             setWidthIndex={setWidthIndex}
+            prompt={currentPrompt}
+            promptOptIn={promptOptIn}
+            promptDismissed={promptDismissed}
+            onAcceptPrompt={() => {
+              setPromptOptIn(true);
+              setPromptDismissed(false);
+            }}
+            onDismissPrompt={() => {
+              setPromptOptIn(false);
+              setPromptDismissed(true);
+            }}
+            onResetPrompt={() => {
+              setPromptOptIn(false);
+              setPromptDismissed(false);
+            }}
             openShare={() => {
               setShareError(null);
               setShareOpen(true);
@@ -139,7 +182,7 @@ export default function HomePage() {
               try {
                 const res = await api.getRandom(mode.drawing.id);
                 if (!res.drawing) {
-                  setViewerError("No other sketches available yet.");
+                  setCelebration({ open: true, next: null });
                 } else {
                   setMode({
                     kind: "view",
@@ -163,6 +206,8 @@ export default function HomePage() {
               setStrokes([]);
               setInProgressPointCount(0);
               setViewerError(null);
+              setPromptOptIn(false);
+              setPromptDismissed(false);
             }}
           />
         )}
@@ -173,8 +218,9 @@ export default function HomePage() {
         open={shareOpen}
         busy={shareBusy}
         error={shareError}
+        promptText={promptOptIn ? currentPrompt : null}
         onCancel={() => setShareOpen(false)}
-        onSubmit={async (name) => {
+        onSubmit={async (name, usedPrompt) => {
           setShareBusy(true);
           setShareError(null);
           try {
@@ -187,26 +233,15 @@ export default function HomePage() {
               authorName: name,
               strokes,
               pointCount,
+              usedPrompt,
             });
             setStatsKey((k) => k + 1);
             setShareOpen(false);
-            if (response.next) {
-              setMode({
-                kind: "view",
-                drawing: response.next,
-                voted: null,
-                hidden: false,
-              });
-              setStrokes([]);
-              setInProgressPointCount(0);
-            } else {
-              setShareError(
-                "Your sketch was saved! No other sketches to show yet. Draw another?",
-              );
-              setStrokes([]);
-              setInProgressPointCount(0);
-              setTimeout(() => setShareError(null), 4000);
-            }
+            setPromptOptIn(false);
+            setPromptDismissed(false);
+            setStrokes([]);
+            setInProgressPointCount(0);
+            setCelebration({ open: true, next: response.next });
           } catch (err) {
             setShareError(
               err instanceof ApiError
@@ -218,6 +253,29 @@ export default function HomePage() {
           } finally {
             setShareBusy(false);
           }
+        }}
+      />
+
+      <OnboardingDialog open={onboardingOpen} onClose={closeOnboarding} />
+
+      <CelebrationDialog
+        open={celebration.open}
+        hasNext={celebration.open && celebration.next !== null}
+        onContinue={() => {
+          if (!celebration.open) return;
+          const next = celebration.next;
+          setCelebration({ open: false });
+          if (next) {
+            setMode({
+              kind: "view",
+              drawing: next,
+              voted: null,
+              hidden: false,
+            });
+          } else {
+            setMode({ kind: "draw" });
+          }
+          setViewerError(null);
         }}
       />
     </div>
@@ -237,6 +295,12 @@ type DrawModeProps = {
   setPaletteId: (id: string) => void;
   setColorIndex: (i: number) => void;
   setWidthIndex: (i: number) => void;
+  prompt: string;
+  promptOptIn: boolean;
+  promptDismissed: boolean;
+  onAcceptPrompt: () => void;
+  onDismissPrompt: () => void;
+  onResetPrompt: () => void;
   openShare: () => void;
 };
 
@@ -251,6 +315,12 @@ function DrawMode({
   setPaletteId,
   setColorIndex,
   setWidthIndex,
+  prompt,
+  promptOptIn,
+  promptDismissed,
+  onAcceptPrompt,
+  onDismissPrompt,
+  onResetPrompt,
   openShare,
 }: DrawModeProps) {
   const palette = getPalette(paletteId);
@@ -290,44 +360,61 @@ function DrawMode({
     <div
       style={{
         display: "flex",
+        flexDirection: "column",
         gap: 12,
-        alignItems: "flex-start",
-        flexWrap: "wrap",
       }}
     >
-      <EtchFrame>
-        <EtchCanvas
-          mode="draw"
-          palette={palette}
-          strokes={strokes}
-          colorIndex={colorIndex}
-          widthIndex={widthIndex}
-          maxPoints={MAX_POINTS}
-          onStrokeCommit={handleStrokeCommit}
-          onInProgressPointCountChange={setInProgressPointCount}
-        />
-      </EtchFrame>
-      <div style={{ width: 260 }}>
-        <Toolbar
-          palette={palette}
-          paletteId={paletteId}
-          colorIndex={colorIndex}
-          widthIndex={widthIndex}
-          pointCount={totalPointCount}
-          maxPoints={MAX_POINTS}
-          canUndo={strokes.length > 0}
-          canReset={hasContent}
-          canShare={strokes.length > 0}
-          onPaletteChange={handlePaletteChange}
-          onColorChange={setColorIndex}
-          onWidthChange={setWidthIndex}
-          onUndo={() => setStrokes((prev) => prev.slice(0, -1))}
-          onReset={() => {
-            setStrokes([]);
-            setInProgressPointCount(0);
-          }}
-          onShare={openShare}
-        />
+      <PromptPanel
+        prompt={prompt}
+        optedIn={promptOptIn}
+        dismissed={promptDismissed}
+        onAccept={onAcceptPrompt}
+        onDismiss={onDismissPrompt}
+        onReset={onResetPrompt}
+      />
+      <div
+        className="sas-draw-row"
+        style={{
+          display: "flex",
+          gap: 12,
+          alignItems: "flex-start",
+          flexWrap: "wrap",
+        }}
+      >
+        <EtchFrame>
+          <EtchCanvas
+            mode="draw"
+            palette={palette}
+            strokes={strokes}
+            colorIndex={colorIndex}
+            widthIndex={widthIndex}
+            maxPoints={MAX_POINTS}
+            onStrokeCommit={handleStrokeCommit}
+            onInProgressPointCountChange={setInProgressPointCount}
+          />
+        </EtchFrame>
+        <div className="sas-side" style={{ width: 260 }}>
+          <Toolbar
+            palette={palette}
+            paletteId={paletteId}
+            colorIndex={colorIndex}
+            widthIndex={widthIndex}
+            pointCount={totalPointCount}
+            maxPoints={MAX_POINTS}
+            canUndo={strokes.length > 0}
+            canReset={hasContent}
+            canShare={strokes.length > 0}
+            onPaletteChange={handlePaletteChange}
+            onColorChange={setColorIndex}
+            onWidthChange={setWidthIndex}
+            onUndo={() => setStrokes((prev) => prev.slice(0, -1))}
+            onReset={() => {
+              setStrokes([]);
+              setInProgressPointCount(0);
+            }}
+            onShare={openShare}
+          />
+        </div>
       </div>
     </div>
   );
@@ -363,6 +450,7 @@ function ViewMode({
 
   return (
     <div
+      className="sas-draw-row"
       style={{
         display: "flex",
         gap: 12,
@@ -379,7 +467,7 @@ function ViewMode({
           replayPartialPoints={replay.replayPartialPoints}
         />
       </EtchFrame>
-      <div style={{ width: 260 }}>
+      <div className="sas-side" style={{ width: 260 }}>
         <ViewerControls
           drawing={drawing}
           replayDone={replay.done}
