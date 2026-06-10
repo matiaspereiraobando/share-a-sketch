@@ -29,7 +29,7 @@ Tunable constants live in [`lib/constants.ts`](./lib/constants.ts).
    npm install
    ```
 2. Create a Postgres database. Easiest option: a free [Neon](https://neon.tech) project. Copy the **pooled** connection string.
-3. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL`.
+3. Copy `.env.example` to `.env.local` and fill in `DATABASE_URL`. To use the admin panel locally, also set `ADMIN_PASSWORD` and `ADMIN_SESSION_SECRET` (any 32+ random characters work in development).
 4. Push the schema to your database:
    ```bash
    npm run db:push
@@ -52,12 +52,32 @@ BASE_URL=https://yourapp.vercel.app npm run smoke
 
 This exercises submit, random, get-by-id and vote (with dedupe) end-to-end.
 
+## Admin panel
+
+A password-protected admin panel lives at [`/admin`](http://localhost:3000/admin). It is gated by [`middleware.ts`](./middleware.ts), which redirects unauthenticated UI requests to `/admin/login` and returns 401 for unauthenticated `/api/admin/*` calls.
+
+What it does:
+
+- Browse all drawings (active and hidden), filter by status, search by author or UUID prefix, and sort by newest, most-flagged, or most-thumbed.
+- Open a drawing to see its full metadata, replay the strokes, and toggle its status between `active` and `hidden` (the inverse of the community soft-hide at `FLAG_THRESHOLD` flags).
+- Inspect the full per-drawing vote log with truncated voter ids.
+- See extended stats: totals split by status, vote breakdown, and a 7-day submissions trend.
+
+Required environment variables (set both in development and production):
+
+- `ADMIN_PASSWORD` - the single password used to sign in. Use a strong, unique value in production.
+- `ADMIN_SESSION_SECRET` - 32+ random bytes used to sign the session cookie. Generate with `openssl rand -base64 32`.
+
+Sessions are stored in an httpOnly, `SameSite=Strict`, signed cookie (`sas-admin-session`, 7-day TTL). Failed logins are rate-limited per IP. Hidden drawings remain inaccessible through the public `GET /api/drawings/[id]` route.
+
 ## Deploy to Vercel
 
 1. Push the repo to GitHub.
 2. On [Vercel](https://vercel.com), import the project. Defaults are fine (Next.js is auto-detected).
 3. In **Project Settings -> Environment Variables**, add:
    - `DATABASE_URL` = your Neon pooled connection string.
+   - `ADMIN_PASSWORD` = a strong, unique admin password.
+   - `ADMIN_SESSION_SECRET` = output of `openssl rand -base64 32`.
 4. Deploy. Vercel will run `next build` automatically.
 5. Push the schema to production (one-time):
    ```bash
@@ -69,14 +89,20 @@ This exercises submit, random, get-by-id and vote (with dedupe) end-to-end.
 
 ```
 app/
+  admin/                    password-gated admin panel (login, dashboard, drawings list/detail)
+  api/admin/                privileged admin endpoints (auth, drawings, stats)
   api/drawings/             POST + random GET
   api/drawings/[id]/        GET by id
   api/drawings/[id]/vote/   POST vote
-  components/               EtchCanvas, EtchFrame, Toolbar, ViewerControls, ShareDialog, Window95, ShortIdChip
+  components/               EtchCanvas, EtchFrame, Toolbar, ViewerControls, ShareDialog, Window95, ShortIdChip, SketchReplay
   page.tsx                  main draw/view state machine
 drizzle/                    generated migrations
 lib/
   db/                       drizzle schema and lazy client
+  adminAuth.ts              admin password + session cookie helpers
+  adminApiClient.ts         typed admin fetch wrapper
+  adminDrawings.ts          admin db helpers (list, detail, status, votes)
+  adminStats.ts             admin aggregate stats
   anonId.ts                 client-side anon browser id
   api.ts                    server-side helpers (json + anon header)
   apiClient.ts              typed fetch wrapper
@@ -86,6 +112,7 @@ lib/
   replay.ts                 time-based replay hook
   types.ts                  shared DTOs
   validation.ts             payload validation
+middleware.ts               admin gate for /admin and /api/admin
 scripts/smoke.mjs           end-to-end smoke test
 ```
 
