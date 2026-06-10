@@ -43,3 +43,17 @@ export const STROKE_WIDTHS = [2, 5, 9] as const;
  * same stroke does not produce darkened blobs.
  */
 export const STROKE_ALPHA = 0.6;
+
+/**
+ * How many days each daily prompt stays active before rotating to the next
+ * one in `lib/prompts.ts`. Set to 1 for one prompt per day; raise to slow
+ * the rotation without changing any other code.
+ */
+export const PROMPT_ROTATION_DAYS = 1;
+
+/**
+ * localStorage key used to remember that the onboarding splash has been
+ * dismissed at least once on this browser. Reopenable from the title-bar
+ * help button regardless.
+ */
+export const ONBOARDING_STORAGE_KEY = "sas:onboarded";

@@ -5,6 +5,7 @@ import { fail, getAnonId, ok } from "@/lib/api";
 import { validateSubmitDrawing } from "@/lib/validation";
 import { SUBMIT_COOLDOWN_MS } from "@/lib/constants";
 import { pickRandomDrawing } from "@/lib/drawings";
+import { getCurrentPrompt } from "@/lib/prompts";
 import type { DrawingDTO } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -52,6 +53,8 @@ export async function POST(request: Request) {
     );
   }
 
+  const promptText = result.value.usedPrompt ? getCurrentPrompt() : null;
+
   const [inserted] = await db
     .insert(drawings)
     .values({
@@ -60,6 +63,7 @@ export async function POST(request: Request) {
       pointCount: result.value.pointCount,
       strokes: result.value.strokes,
       creatorAnonId: anonId,
+      promptText,
     })
     .returning({ id: drawings.id });
 

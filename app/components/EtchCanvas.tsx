@@ -46,6 +46,7 @@ type ViewProps = {
 export type EtchCanvasProps = DrawProps | ViewProps;
 
 const DISPLAY_SCALE = 2;
+const DISPLAY_MAX_WIDTH = CANVAS_WIDTH * DISPLAY_SCALE;
 
 function drawStrokes(
   ctx: CanvasRenderingContext2D,
@@ -284,8 +285,10 @@ export function EtchCanvas(props: EtchCanvasProps) {
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
         style={{
-          width: CANVAS_WIDTH * DISPLAY_SCALE,
-          height: CANVAS_HEIGHT * DISPLAY_SCALE,
+          width: DISPLAY_MAX_WIDTH,
+          maxWidth: "100%",
+          aspectRatio: `${CANVAS_WIDTH} / ${CANVAS_HEIGHT}`,
+          height: "auto",
           background: "var(--canvas-bg)",
           imageRendering: "pixelated",
           touchAction: "none",

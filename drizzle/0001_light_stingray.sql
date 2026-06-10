@@ -1,0 +1,1 @@
+ALTER TABLE "drawings" ADD COLUMN "prompt_text" text;

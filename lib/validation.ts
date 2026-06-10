@@ -11,6 +11,7 @@ export type SubmitDrawingPayload = {
   authorName: string;
   strokes: StoredStroke[];
   pointCount: number;
+  usedPrompt: boolean;
 };
 
 const MAX_NAME_LENGTH = 24;
@@ -100,6 +101,8 @@ export function validateSubmitDrawing(
     });
   }
 
+  const usedPrompt = obj.usedPrompt === true;
+
   return {
     ok: true,
     value: {
@@ -107,6 +110,7 @@ export function validateSubmitDrawing(
       authorName,
       strokes,
       pointCount: totalPoints,
+      usedPrompt,
     },
   };
 }
